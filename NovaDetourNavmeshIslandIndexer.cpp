@@ -21,7 +21,7 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
-// Extended from: https://github.com/recastnavigation/recastnavigation/tree/05b2b8da80037887d3e79af8a59a8f0f8ed02602/RecastDemo/Source
+// Extended from jakobbotsch's implementation: https://github.com/recastnavigation/recastnavigation/tree/05b2b8da80037887d3e79af8a59a8f0f8ed02602/RecastDemo/Source
 // by Marvin Gouw 7/7/2020
 
 #include "DetourNavMesh.h"
