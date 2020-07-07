@@ -33,6 +33,7 @@
 #include "DrawDebugHelpers.h"
 
 constexpr bool DebugIslandIndexing = false;
+constexpr bool DebugDrawIslands = false;
 
 DECLARE_CYCLE_STAT(TEXT("Navmesh Island Indexing"), STAT_NovaIslandIndexing, STATGROUP_NovaStat);
 
@@ -104,12 +105,7 @@ public:
 		// Assume the ref is valid, no bounds checks.
 		unsigned int salt, it, ip;
 		m_nav->decodePolyId(ref, salt, it, ip);
-		auto ret = m_tiles[it].flags[ip];
-		if (ret > 0)
-		{
-			int a = 0;
-		}
-		return ret;
+		return m_tiles[it].flags[ip];
 	}
 
 	inline void setFlags(dtPolyRef ref, uint16 flags)
@@ -289,30 +285,33 @@ void NovaDetourNavmeshIslandIndexer::FloodNavmesh(TSet< dtPolyRef> &polyRefsFloo
 
 void NovaDetourNavmeshIslandIndexer::DrawDebugPolyRef(const dtPolyRef neiRef, AActor* Owner, FColor color)
 {
-	const dtMeshTile* drawtile = 0;
-	const dtPoly* drawpoly = 0;
-	if (NavMesh->getTileAndPolyByRef(neiRef, &drawtile, &drawpoly) == DT_SUCCESS)
+	if constexpr (DebugDrawIslands)
 	{
-		if (drawpoly && drawtile)
+		const dtMeshTile* drawtile = 0;
+		const dtPoly* drawpoly = 0;
+		if (NavMesh->getTileAndPolyByRef(neiRef, &drawtile, &drawpoly) == DT_SUCCESS)
 		{
-			TArray<FVector> verts;
-			TArray<int32> indices;
-			for (int vert = 0; vert < drawpoly->vertCount; ++vert)
+			if (drawpoly && drawtile)
 			{
-				const unsigned short vertIndex = drawpoly->verts[vert];
-				const float* vertArray = &drawtile->verts[vertIndex * 3];
-				const FVector unrealPoint = Recast2UnrealPoint(vertArray);
-				verts.Add(unrealPoint);
-			}
+				TArray<FVector> verts;
+				TArray<int32> indices;
+				for (int vert = 0; vert < drawpoly->vertCount; ++vert)
+				{
+					const unsigned short vertIndex = drawpoly->verts[vert];
+					const float* vertArray = &drawtile->verts[vertIndex * 3];
+					const FVector unrealPoint = Recast2UnrealPoint(vertArray);
+					verts.Add(unrealPoint);
+				}
 
-			// add triangle fan for render:
-			for (int idx = 1; idx + 1 < verts.Num(); idx++)
-			{
-				indices.Add(0);
-				indices.Add(idx);
-				indices.Add(idx + 1);
+				// add triangle fan for render:
+				for (int idx = 1; idx + 1 < verts.Num(); idx++)
+				{
+					indices.Add(0);
+					indices.Add(idx);
+					indices.Add(idx + 1);
+				}
+				DrawDebugMesh(Owner->GetWorld(), verts, indices, color, true, -1.f, 100);
 			}
-			DrawDebugMesh(Owner->GetWorld(), verts, indices, color, true, -1.f, 100);
 		}
 	}
 }
@@ -411,24 +410,31 @@ void NovaDetourNavmeshIslandIndexer::OnRegenerateTiles(AActor* Owner, const TArr
 			const uint16 set = flag & NOVA_POLYFLAGS_UNSET_FLOODED;
 			CurrentNavFlags->setFlags(ref, set);
 			NavMesh->setPolyFlags(ref, set);
-			if (polyRefsFlooded.Remove(ref) == 0)
+			if constexpr (DebugIslandIndexing)
 			{
-				int a = 0;
+				if (polyRefsFlooded.Remove(ref) == 0)
+				{
+					UE_LOG(LogNova, Error, TEXT("Island Indexing Error: Poly Ref flooded not found in previous flood."));
+				}
 			}
 		}
 	}
 
-	if(polyRefsFlooded.Num() > 0)
+	// Some debug
+	if constexpr (DebugIslandIndexing)
 	{
-		for (auto ref : polyRefsFlooded)
+		if (polyRefsFlooded.Num() > 0)
 		{
-			unsigned int salt, it, ip;
-			NavMesh->decodePolyId(ref, salt, it, ip);
-			if (ChangedTiles.Contains(it) == false)
+			UE_LOG(LogNova, Error, TEXT("Flooded poly refs were not all processed during RegenerateTiles for Island Indexing"));
+			for (auto ref : polyRefsFlooded)
 			{
-				int b = 0;
+				unsigned int salt, it, ip;
+				NavMesh->decodePolyId(ref, salt, it, ip);
+				if (ChangedTiles.Contains(it) == false)
+				{
+					UE_LOG(LogNova, Error, TEXT("Flooded poly refs touched more tiles than was processed by RegenerateTiles. Extra tiles were not correctly updated. Tile %d"), it);
+				}
 			}
-			int a = 0;
 		}
 	}
 	// flood passes
