@@ -21,6 +21,10 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
+// This implementation does a flood on the nav-mesh and sets separate indices for each nav-mesh 'island'.
+// Islands do not connect to one another.Checking the poly flag of two nav-mesh polygons you can quickly tell
+// if you can reach that polygon via another polygon.This implementation works on dynamically generation of nav-mesh and is fast.
+
 // Extended from: https://github.com/recastnavigation/recastnavigation/tree/05b2b8da80037887d3e79af8a59a8f0f8ed02602/RecastDemo/Source
 // by Marvin Gouw 7/7/2020
 
